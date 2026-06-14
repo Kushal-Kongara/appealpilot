@@ -1,0 +1,33 @@
+.env*.local
+.env
+# dependencies
+node_modules/
+
+# next/vercel
+.next/
+out/
+.vercel/
+
+# env
+.env
+.env.local
+.env*.local
+
+# mac
+.DS_Store
+
+# dependencies
+node_modules/
+
+# next/vercel
+.next/
+out/
+.vercel/
+
+# env
+.env
+.env.local
+.env*.local
+
+# mac
+.DS_Store
