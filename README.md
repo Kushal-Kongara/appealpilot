@@ -1,93 +1,143 @@
 # AppealPilot
 
-> AI-powered agent that turns confusing health insurance denial letters into a complete, professional appeal package — in seconds.
+> AI agent that turns confusing health insurance denial letters into a complete, ready-to-send appeal package — in seconds.
 
-Built for hackathon demo. Powered by Tavily, mem0, Composio, and Nebius.
+**Demo:** `npm run dev` → `http://localhost:3000`
+
+---
 
 ## What It Does
 
-1. **Paste** your insurance denial letter
-2. **AI agent** extracts key info (insurer, denial reason, deadline, required documents)
+1. **Paste** your insurance denial letter (or click a sample)
+2. **Agent pipeline** extracts insurer, denial reason, deadline, required documents
 3. **Tavily** searches real-time appeal rules and insurer-specific guidance
-4. **mem0** saves your case to persistent memory for future reference
-5. **Generator** drafts: appeal letter, email draft, phone script, document checklist, next steps
-6. **Composio** prepares one-click actions: Gmail draft, Drive folder, Calendar reminder
+4. **mem0** saves the case to persistent memory for future sessions
+5. **Generator** produces: appeal letter · email draft · phone script · call guide · document checklist · next steps
+6. **Appeal Strength Score** rates your position 0–100 with missing evidence callouts
+7. **Composio** prepares one-click Gmail draft, Drive folder, Calendar reminder
+8. **Agent Receipts** shows exactly what each sponsor did — built for judge visibility
+
+---
+
+## Demo Flow (4-minute pitch)
+
+1. Open `http://localhost:3000`
+2. Click **"Run Live Demo"** (violet button) — auto-fills psoriasis sample + builds full package
+3. Walk through **Agent Timeline** as it animates
+4. Show **Appeal Strength Score** (85/100 Strong)
+5. Click through **tabs**: Appeal Letter → Email → Call Guide → Checklist
+6. Click **Composio actions** → show "Demo Mode: Gmail draft prepared"
+7. Scroll down to **Agent Receipts** — terminal-style panel showing Tavily LIVE, mem0 SAVED, Composio DEMO, Nebius FALLBACK
+8. Try a different sample: **ER Visit (Out of Network)** or **MRI (Prior Auth Missing)** — watch denial reason, letter, and call script change
+
+---
 
 ## Sponsor Stack
 
-| Sponsor | Role |
-|---------|------|
-| **Tavily** | Real-time web research on appeal rules and insurer policies |
-| **mem0** | Persistent agent memory — stores each case for future sessions |
-| **Composio** | Tool actions — Gmail, Google Drive, Google Calendar integration |
-| **Nebius** | AI inference (OpenAI-compatible endpoint) — falls back to templates if key missing |
+| Sponsor | Role | Status |
+|---------|------|--------|
+| **Tavily** | Real-time web research on appeal rules and insurer policies | Live (key present) |
+| **mem0** | Persistent agent memory — stores each case for future sessions | Live (key present) |
+| **Composio** | Tool actions — Gmail Draft, Drive Folder, Calendar Reminder | Demo mode (OAuth not wired) |
+| **Nebius** | AI inference via OpenAI-compatible endpoint | Fallback active (key not set) |
 
-## Getting Started
+All sponsors have graceful fallbacks — the app never crashes.
+
+---
+
+## Local Setup
 
 ```bash
+git clone <repo>
+cd appealpilot
 npm install
 cp .env.local.example .env.local
-# Fill in your API keys in .env.local
+# Fill in API keys (see below)
 npm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000).
 
 ## Environment Variables
 
 ```env
-# AI model / inference (optional — templates used as fallback)
+# AI inference — optional, high-quality templates used as fallback
 NEBIUS_API_KEY=
 NEBIUS_BASE_URL=
 NEBIUS_MODEL=
 
-# Web research (real-time appeal guidance)
+# Real-time appeal research
 TAVILY_API_KEY=
 
-# Tool actions: Gmail, Drive, Calendar
+# Gmail, Drive, Calendar tool actions
 COMPOSIO_API_KEY=
 
-# Agent memory
+# Persistent case memory
 MEM0_API_KEY=
 ```
 
-The app works without any keys — all sponsors have graceful fallbacks for demo mode.
+The app works without any keys in demo mode. Keys unlock live sponsor integrations.
+
+---
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **Judge Demo Mode** | One-click: fills sample + builds full package automatically |
+| **3 Sample Denials** | Psoriasis (not medically necessary), ER visit (out of network), MRI (prior auth) |
+| **Appeal Strength Score** | 0–100 score with factor breakdown and missing evidence callouts |
+| **6-tab Document Suite** | Letter · Email · Phone Script · Call Guide · Checklist · Next Steps |
+| **Agent Timeline** | Animated 6-step pipeline showing each sponsor action |
+| **Agent Receipts** | Terminal-style panel proving what Tavily, mem0, Composio, Nebius did |
+| **Tavily Source Cards** | Real or demo-fallback web sources with titles, snippets, links |
+| **Case Memory Panel** | mem0 save status + what will be recalled next session |
+| **Composio Actions** | Demo-mode Gmail/Drive/Calendar — structured for real OAuth plug-in |
+
+---
 
 ## Architecture
 
 ```
 src/
 ├── app/
-│   ├── page.tsx                  # Main UI — form, timeline, results
-│   ├── api/appeal/build/         # POST: parse + research + generate
-│   └── api/actions/composio/     # POST: Gmail / Drive / Calendar actions
+│   ├── page.tsx                       # Main UI — hero, samples, timeline, results
+│   ├── api/
+│   │   ├── appeal/build/route.ts      # POST: full pipeline
+│   │   └── actions/composio/route.ts  # POST: tool actions
 ├── lib/
-│   ├── types.ts                  # Shared TypeScript interfaces
+│   ├── types.ts                       # All shared interfaces
 │   ├── appeal/
-│   │   ├── parser.ts             # Extract info from denial letter
-│   │   └── generator.ts          # Generate appeal package (AI + templates)
+│   │   ├── parser.ts                  # Regex-based denial letter parser
+│   │   ├── generator.ts               # AI + template package generator
+│   │   └── strength.ts                # Appeal strength calculator (0–100)
 │   └── clients/
-│       ├── ai-provider.ts        # Nebius (OpenAI-compatible) with null fallback
-│       ├── tavily.ts             # Web search with demo fallback
-│       ├── mem0.ts               # Persistent memory with graceful skip
-│       └── composio.ts           # Tool actions with demo mode
+│       ├── ai-provider.ts             # Nebius (OpenAI-compat) — null if no key
+│       ├── tavily.ts                  # Web search + sources — demo fallback
+│       ├── mem0.ts                    # Persistent memory — graceful skip
+│       └── composio.ts                # Tool actions — demo mode
 └── components/
-    ├── AgentTimeline.tsx         # Animated step-by-step agent activity
-    ├── ResultsPanel.tsx          # Tabbed results + Composio buttons
-    └── SponsorBadges.tsx         # Sponsor info cards
+    ├── AgentTimeline.tsx              # Animated step-by-step status
+    ├── AgentReceipts.tsx              # Terminal-style sponsor proof panel
+    ├── ResultsPanel.tsx               # Tabs + strength + memory
+    └── SponsorBadges.tsx             # Sponsor info cards
 ```
 
-## Demo Flow
+---
 
-1. Click **"Try Sample Letter"** to load a psoriasis denial example
-2. Click **"Build Appeal Package"** — watch the agent timeline animate
-3. Review the generated: Summary → Appeal Letter → Email Draft → Phone Script → Checklist → Next Steps
-4. Click Composio action buttons to simulate Gmail / Drive / Calendar integration
+## Current Limitations
 
-## Design
+- **Composio OAuth** not wired — Gmail/Drive/Calendar return demo responses
+- **Nebius** API key not configured — templates used (still high quality)
+- **PDF export** not implemented (out of scope)
+- **File upload** not implemented — paste text only
+- **Auth/users** not implemented — single-user local demo
+- Disclaimer: not legal or medical advice
 
-- Clean white/blue medical-trust theme
-- Tailwind CSS + lucide-react icons
-- Mobile responsive
-- Animated agent timeline
-- Tabbed document viewer with copy-to-clipboard
+---
+
+## Scripts
+
+```bash
+npm run dev    # Start dev server
+npm run build  # Production build
+npm run lint   # ESLint check
+```

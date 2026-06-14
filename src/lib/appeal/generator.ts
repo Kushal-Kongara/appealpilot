@@ -21,8 +21,8 @@ Return ONLY valid JSON with these exact keys:
   "appealLetter": "Complete formal appeal letter with [PLACEHOLDERS] for personal info",
   "emailDraft": "Complete email draft ready to send",
   "phoneScript": "Detailed phone call script with opening, key points, escalation, and closing",
-  "documentChecklist": ["item1", "item2", ...],
-  "nextSteps": ["step1", "step2", ...]
+  "documentChecklist": ["item1", "item2"],
+  "nextSteps": ["step1", "step2"]
 }`;
 
   const aiResult = await generateWithAI(aiPrompt);
@@ -30,8 +30,11 @@ Return ONLY valid JSON with these exact keys:
     try {
       const jsonMatch = aiResult.match(/\{[\s\S]+\}/);
       if (jsonMatch) {
-        const parsed2 = JSON.parse(jsonMatch[0]) as AppealPackage;
-        if (parsed2.summary && parsed2.appealLetter) return parsed2;
+        const pkg = JSON.parse(jsonMatch[0]) as AppealPackage;
+        if (pkg.summary && pkg.appealLetter) {
+          pkg.callSimScript = buildCallSimScript(parsed);
+          return pkg;
+        }
       }
     } catch {
       // fall through to templates
@@ -39,6 +42,73 @@ Return ONLY valid JSON with these exact keys:
   }
 
   return buildFromTemplates(parsed, researchSummary);
+}
+
+function buildCallSimScript(parsed: DenialInfo): string {
+  const { insuranceCompany, denialReason, appealDeadline, treatment } = parsed;
+  const lower = denialReason.toLowerCase();
+
+  let conditional: string;
+
+  if (lower.includes("not medically necessary")) {
+    conditional = `IF THEY SAY "NOT MEDICALLY NECESSARY"
+→ "My physician has provided detailed documentation confirming medical necessity. I am requesting a peer-to-peer review between my doctor and your medical director — how do I arrange that?"
+→ "Under the ACA, you are required to share the exact clinical criteria used in my denial. Can you send me those specific guidelines in writing?"
+→ "Please provide the full name and specialty of the physician who reviewed my claim."`;
+  } else if (lower.includes("prior authorization")) {
+    conditional = `IF THEY SAY "PRIOR AUTHORIZATION REQUIRED"
+→ "My physician's office attempted to obtain prior authorization. I have documentation of that attempt and can provide it immediately — who should I send it to?"
+→ "This was a time-sensitive clinical situation. Does your plan allow retroactive authorization for urgent cases?"
+→ "Can you escalate this to a clinical supervisor to review the retroactive authorization option?"`;
+  } else if (lower.includes("out of network") || lower.includes("out-of-network")) {
+    conditional = `IF THEY SAY "OUT OF NETWORK"
+→ "Under the No Surprises Act and ACA, out-of-network emergency care must be reimbursed at in-network rates when no in-network provider was reasonably available."
+→ "Please confirm whether an in-network provider with the same specialty was available within your network at the time and location of my care."
+→ "I'm requesting an access-to-care exception — please escalate to a clinical supervisor."`;
+  } else {
+    conditional = `IF THEY REPEAT THE DENIAL REASON
+→ "I need the exact clinical criteria that were not met — please email me that documentation."
+→ "I'd like this escalated to a clinical supervisor or medical director immediately."
+→ "I will be filing for an External Independent Review if this is not resolved in the next 5 business days."`;
+  }
+
+  return `CALL GUIDE — ${insuranceCompany}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1 — OPENING
+"Hello, my name is [YOUR NAME], Member ID [YOUR ID], date of birth [YOUR DOB]. I am calling about a denial I received for ${treatment}. The stated reason was '${denialReason}.' Please connect me with the Appeals Department."
+
+STEP 2 — KEY QUESTIONS TO ASK
+① "What is the reference number for this call?"
+② "What specific clinical criteria was my claim denied against?"
+③ "Who reviewed my claim — name and specialty?"
+④ "Please confirm my appeal deadline in writing — I understand it is ${appealDeadline}."
+⑤ "Is a peer-to-peer review available between my physician and your medical director?"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3 — CONDITIONAL RESPONSES
+
+${conditional}
+
+IF THEY SAY "WE NEED MORE INFORMATION"
+→ "Please send me a specific written list of what is required and the deadline. My email is [YOUR EMAIL]."
+
+IF THEY ASK YOU TO RESUBMIT
+→ "I will resubmit — please confirm the exact format, deadline, and submission address so nothing is rejected on a technicality."
+
+ESCALATION
+→ "I'd like to speak with a supervisor, please."
+→ "I will be requesting an External Independent Review (IRO) if this is not resolved."
+→ "I will also be contacting my state's Department of Insurance."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4 — CLOSING
+"Please note my call. My name is [YOUR NAME], Member ID [YOUR ID]. I need a reference number for this call and your employee ID for my records. Thank you."
+
+CALL NOTES:
+Date/Time: ________________  Rep Name: ________________
+Reference #: ______________  Employee ID: ______________
+Key Points Discussed: _________________________________`;
 }
 
 function buildFromTemplates(
@@ -226,6 +296,7 @@ What was said: ________________________________________________`;
     appealLetter,
     emailDraft,
     phoneScript,
+    callSimScript: buildCallSimScript(parsed),
     documentChecklist: [...new Set(documentChecklist)],
     nextSteps,
   };

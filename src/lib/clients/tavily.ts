@@ -1,14 +1,45 @@
+import type { TavilySource, TavilySearchResult } from "../types";
+
+const DEMO_SOURCES: TavilySource[] = [
+  {
+    title: "How to Appeal a Health Insurance Denial — HealthCare.gov",
+    snippet:
+      "You have the right to appeal any decision your health insurance plan makes to deny payment for a claim. Both internal and external appeals are available under the ACA.",
+    url: "https://www.healthcare.gov/appeal-insurance-company-decision/",
+    isDemo: true,
+  },
+  {
+    title: "Consumer Assistance — CMS.gov",
+    snippet:
+      "Under the Affordable Care Act, insurers must allow you to appeal a coverage decision. You may request an expedited appeal (72 hours) for urgent medical situations.",
+    url: "https://www.cms.gov/CCIIO/Programs-and-Initiatives/Consumer-Support-and-Information",
+    isDemo: true,
+  },
+  {
+    title: "How to Write an Effective Insurance Appeal — Patient Advocate Foundation",
+    snippet:
+      "An effective appeal letter cites specific clinical criteria, includes a Letter of Medical Necessity, and references relevant clinical practice guidelines from recognized medical associations.",
+    url: "https://www.patientadvocate.org/explore-our-resources/dealing-with-insurance/",
+    isDemo: true,
+  },
+];
+
 export async function searchAppealGuidance(
   insurer: string,
   denialReason: string
-): Promise<string> {
+): Promise<TavilySearchResult> {
   const key = process.env.TAVILY_API_KEY;
+  const query = `${insurer} health insurance appeal "${denialReason}" how to win rights`;
 
-  if (!key) return getDemoResearch(insurer, denialReason);
+  if (!key) {
+    return {
+      summary: getDemoResearch(insurer, denialReason),
+      sources: DEMO_SOURCES,
+      query,
+    };
+  }
 
   try {
-    const query = `${insurer} health insurance appeal "${denialReason}" how to win`;
-
     const res = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: {
@@ -24,19 +55,46 @@ export async function searchAppealGuidance(
       }),
     });
 
-    if (!res.ok) return getDemoResearch(insurer, denialReason);
+    if (!res.ok) {
+      return { summary: getDemoResearch(insurer, denialReason), sources: DEMO_SOURCES, query };
+    }
 
     const data = await res.json();
-    const answer: string = data.answer || "";
-    const snippets: string = (
-      data.results?.slice(0, 3) as Array<{ title: string; content: string }>
-    )
-      ?.map((r) => `• ${r.title}: ${r.content?.slice(0, 200)}`)
-      .join("\n") || "";
+    const answer: string = (data.answer as string) || "";
+    const rawResults = (data.results || []) as Array<{
+      title: string;
+      url: string;
+      content: string;
+    }>;
 
-    return answer || snippets || getDemoResearch(insurer, denialReason);
+    const sources: TavilySource[] = rawResults.slice(0, 4).map((r) => ({
+      title: r.title,
+      snippet:
+        (r.content?.slice(0, 220) ?? "") +
+        (r.content?.length > 220 ? "..." : ""),
+      url: r.url,
+      isDemo: false,
+    }));
+
+    const snippets = rawResults
+      .slice(0, 3)
+      .map((r) => `• ${r.title}: ${r.content?.slice(0, 200)}`)
+      .join("\n");
+
+    const summary =
+      answer || snippets || getDemoResearch(insurer, denialReason);
+
+    return {
+      summary,
+      sources: sources.length > 0 ? sources : DEMO_SOURCES,
+      query,
+    };
   } catch {
-    return getDemoResearch(insurer, denialReason);
+    return {
+      summary: getDemoResearch(insurer, denialReason),
+      sources: DEMO_SOURCES,
+      query,
+    };
   }
 }
 

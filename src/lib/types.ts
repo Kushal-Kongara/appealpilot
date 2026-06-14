@@ -11,6 +11,7 @@ export interface AppealPackage {
   appealLetter: string;
   emailDraft: string;
   phoneScript: string;
+  callSimScript: string;
   documentChecklist: string[];
   nextSteps: string[];
 }
@@ -22,6 +23,66 @@ export interface AgentStep {
   detail?: string;
 }
 
+// --- New types ---
+
+export interface TavilySource {
+  title: string;
+  snippet: string;
+  url: string;
+  isDemo?: boolean;
+}
+
+export interface TavilySearchResult {
+  summary: string;
+  sources: TavilySource[];
+  query: string;
+}
+
+export interface StrengthFactor {
+  name: string;
+  present: boolean;
+  impact: number;
+}
+
+export type StrengthLabel = "Weak" | "Fair" | "Good" | "Strong";
+
+export interface AppealStrength {
+  score: number;
+  label: StrengthLabel;
+  factors: StrengthFactor[];
+  missingEvidence: string[];
+  improvements: string[];
+}
+
+export interface AgentReceipts {
+  tavily: {
+    status: "live" | "fallback";
+    query: string;
+    resultsCount: number;
+  };
+  mem0: {
+    status: "saved" | "fallback";
+    memorySaved: boolean;
+    detail: string;
+  };
+  composio: {
+    status: "ready" | "demo";
+    actionsAvailable: string[];
+  };
+  nebius: {
+    status: "live" | "fallback";
+    model?: string;
+    detail: string;
+  };
+}
+
+export interface MemoryRecall {
+  remembered: string[];
+  willRecall: string[];
+}
+
+// --- Request / Response ---
+
 export interface BuildAppealRequest {
   denialText: string;
 }
@@ -32,6 +93,10 @@ export interface BuildAppealResponse {
   memorySaved: boolean;
   package: AppealPackage;
   steps: AgentStep[];
+  strength: AppealStrength;
+  receipts: AgentReceipts;
+  memoryRecall: MemoryRecall;
+  tavilySources: TavilySource[];
 }
 
 export interface ComposioActionRequest {
