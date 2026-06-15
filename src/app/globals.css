@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Lilita+One&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Lilita+One&display=swap');
 
 :root {
   --foreground-rgb: 46, 58, 47;       /* Dark charcoal/olive */
@@ -128,6 +128,15 @@ body {
 
   .section-label {
     @apply text-[10px] font-bold uppercase tracking-widest text-[#C04000];
+  }
+
+  /* Generic card aliases used by components */
+  .card {
+    @apply bg-white rounded-2xl border border-neutral-200/60 shadow-sm;
+  }
+
+  .card-editorial {
+    @apply rounded-2xl border border-neutral-200/60 shadow-sm;
   }
 }
 
